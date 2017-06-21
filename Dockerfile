@@ -1,13 +1,14 @@
 FROM debian:latest
 RUN apt-get -y update
+# we don't need postfix
 #RUN echo "postfix postfix/mailname string list.agoranomic.org" | debconf-set-selections && \
 #    echo "postfix postfix/main_mailer_type string 'Internet Site'" | debconf-set-selections
 RUN apt-get install -y sudo sed python python-virtualenv python-dev build-essential postgresql libpq-dev swaks redis-server libxslt1-dev libjpeg62-turbo-dev zlib1g-dev
 ADD groupserver-16.04.tar.gz /tmp/
-ADD site.cfg config.cfg /tmp/
+ADD site.cfg /tmp/
 RUN useradd -m -s /bin/bash user
 RUN mv /tmp/groupserver-* /groupserver && \
-    mv /tmp/site.cfg /tmp/config.cfg /groupserver/ && \
+    mv /tmp/site.cfg /groupserver/ && \
     chown -R user /groupserver
 WORKDIR /groupserver
 USER user
@@ -17,7 +18,8 @@ RUN . ./bin/activate && buildout -c buildout.cfg bootstrap
 RUN . ./bin/activate && buildout -n install
 RUN . ./bin/activate && buildout -n -c site.cfg install
 # expensive stuff is done
-RUN rm -r etc && ln -s /gs-persistent/groupserver-etc etc
+RUN rm -r etc config.cfg && ln -s /gs-persistent/groupserver-etc etc && \
+                            ln -s /gs-persistent/config.cfg config.cfg
 USER root
 RUN sed -ir -e "s@^.*max_prepared_transactions = .*@max_prepared_transactions = 10@" \
             -e "s@^.*data_directory = .*@data_directory = '/gs-persistent/postgres'@" \
